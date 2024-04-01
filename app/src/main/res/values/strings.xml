@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">HotelReservationSystem_Java</string>
+    <string name="welcome_text">Welcome to Hotel Reservation System</string>
+</resources>
