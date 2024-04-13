@@ -1,6 +1,7 @@
 package com.example.hotelreservationsystem_java;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -29,6 +30,7 @@ public class HotelsListFragment extends Fragment implements ItemClickListener {
     TextView headingTextView;
     ProgressBar progressBar;
     List<HotelListData> userListResponseData;
+    TextView hotelAvaliabiltyTextView;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -45,6 +47,8 @@ public class HotelsListFragment extends Fragment implements ItemClickListener {
         //heading text view
         headingTextView = view.findViewById(R.id.heading_text_view);
         progressBar = view.findViewById(R.id.progress_bar);
+        hotelAvaliabiltyTextView = view.findViewById(R.id.hotel_avaliable_text);
+
 
         String checkInDate = getArguments().getString("check in date");
         String checkOutDate = getArguments().getString("check out date");
@@ -54,29 +58,34 @@ public class HotelsListFragment extends Fragment implements ItemClickListener {
         headingTextView.setText("Welcome user, displaying hotel for " + numberOfGuests + " guests staying from " + checkInDate +
                 " to " + checkOutDate);
 
-
-        ArrayList<HotelListData> hotelListData = initHotelListData();
-        RecyclerView recyclerView = view.findViewById(R.id.hotel_list_recyclerView);
-        recyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
-        HotelListAdapter hotelListAdapter = new HotelListAdapter(getActivity(), hotelListData);
-        recyclerView.setAdapter(hotelListAdapter);
-        //getHotelsListsData();
+        getHotelsListsData();
     }
 
-    public ArrayList<HotelListData> initHotelListData() {
-        ArrayList<HotelListData> list = new ArrayList<>();
+    private void getHotelsListsData() {
+        Api.getClient().getHotelsLists(new Callback<List<HotelListData>>() {
+            @Override
+            public void success(List<HotelListData> userListResponses, Response response) {
+                // in this method we will get the response from API
+                userListResponseData = userListResponses;
 
-        list.add(new HotelListData("Halifax Regional Hotel", "2000$", "true"));
-        list.add(new HotelListData("Hotel Pearl", "500$", "false"));
-        list.add(new HotelListData("Hotel Amano", "800$", "true"));
-        list.add(new HotelListData("San Jones", "250$", "false"));
-        list.add(new HotelListData("Halifax Regional Hotel", "2000$", "true"));
-        list.add(new HotelListData("Hotel Pearl", "500$", "false"));
-        list.add(new HotelListData("Hotel Amano", "800$", "true"));
-        list.add(new HotelListData("San Jones", "250$", "false"));
 
-        return list;
+                // Set up the RecyclerView
+                setupRecyclerView();
+            }
+
+            @Override
+            public void failure(RetrofitError error) {
+                // if error occurs in network transaction then we can get the error in this method.
+                Toast.makeText(getActivity(), error.toString(), Toast.LENGTH_LONG).show();
+                for (int i = 0; i > -1; i++) {
+                    Log.d("BS", error.toString());
+                }
+
+            }
+        });
     }
+
+
 
 
     private void setupRecyclerView() {
@@ -99,19 +108,28 @@ public class HotelsListFragment extends Fragment implements ItemClickListener {
         String price = hotelListData.getPrice();
         String availability = hotelListData.getAvailability();
 
-        Bundle bundle = new Bundle();
-        bundle.putString("hotel name", hotelName);
-        bundle.putString("hotel price", price);
-        bundle.putString("hotel availability", availability);
+        if(availability == "true") {
+            Bundle bundle = new Bundle();
+            bundle.putString("hotel name", hotelName);
+            bundle.putString("hotel price", price);
+            bundle.putString("hotel availability", availability);
+            bundle.putString("check in date", getArguments().getString("check in date"));
+            bundle.putString("check out date", getArguments().getString("check out date"));
+            bundle.putString("number of guests", getArguments().getString("number of guests"));
 
-        HotelGuestDetailsFragment hotelGuestDetailsFragment = new HotelGuestDetailsFragment();
-        hotelGuestDetailsFragment.setArguments(bundle);
+            HotelGuestDetailsFragment hotelGuestDetailsFragment = new HotelGuestDetailsFragment();
+            hotelGuestDetailsFragment.setArguments(bundle);
 
-        FragmentTransaction fragmentTransaction = getFragmentManager().beginTransaction();
-        fragmentTransaction.remove(HotelsListFragment.this);
-        fragmentTransaction.replace(R.id.main_layout, hotelGuestDetailsFragment);
-        fragmentTransaction.addToBackStack(null);
-        fragmentTransaction.commitAllowingStateLoss();
+            FragmentTransaction fragmentTransaction = getFragmentManager().beginTransaction();
+            fragmentTransaction.remove(HotelsListFragment.this);
+            fragmentTransaction.replace(R.id.main_layout, hotelGuestDetailsFragment);
+            fragmentTransaction.addToBackStack(null);
+            fragmentTransaction.commitAllowingStateLoss();
+        } else if(availability == "false"){
+            hotelAvaliabiltyTextView.setText("Hotel unavaliable");
+        } else{
+            hotelAvaliabiltyTextView.setText("Unkown Error");
+        }
 
     }
 }

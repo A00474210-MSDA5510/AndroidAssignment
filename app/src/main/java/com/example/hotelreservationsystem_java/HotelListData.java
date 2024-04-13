@@ -5,11 +5,13 @@ public class HotelListData {
     String hotel_name;
     String price;
     String availability;
+    Integer id;
 
-    public HotelListData(String hotel_name, String price, String availability) {
+    public HotelListData(String hotel_name, String price, String availability, Integer id) {
         this.hotel_name = hotel_name;
         this.price = price;
         this.availability = availability;
+        this.id = id;
     }
 
     public String getHotel_name() {
@@ -31,6 +33,10 @@ public class HotelListData {
     public String getAvailability() {
         return availability;
     }
+
+    public void setHotel_id() {this.id = id;}
+
+    public Integer getHotel_id() {return id;}
 
     public void setAvailability(String availability) {
         this.availability = availability;

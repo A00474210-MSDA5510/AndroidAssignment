@@ -39,6 +39,8 @@ dependencies {
     implementation(libs.constraintlayout)
     implementation(libs.recyclerview)
     implementation(libs.retrofit)
+    implementation(libs.core)
+    implementation(libs.zxing.android.embedded)
 
 
     testImplementation(libs.junit)

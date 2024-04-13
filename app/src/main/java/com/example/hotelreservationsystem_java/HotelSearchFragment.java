@@ -2,6 +2,7 @@ package com.example.hotelreservationsystem_java;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -9,9 +10,14 @@ import android.widget.Button;
 import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
+import android.widget.ImageView;
+import java.util.Locale;
+import android.app.DatePickerDialog;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -21,6 +27,19 @@ import androidx.fragment.app.FragmentTransaction;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.List;
+
+import retrofit.Callback;
+import retrofit.RetrofitError;
+import retrofit.client.Response;
+
+import android.graphics.Bitmap;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.WriterException;
+import com.google.zxing.common.BitMatrix;
+import android.graphics.Color;
+import com.google.zxing.MultiFormatWriter;
+import com.google.zxing.qrcode.QRCodeWriter;
 
 public class HotelSearchFragment extends Fragment {
 
@@ -31,7 +50,18 @@ public class HotelSearchFragment extends Fragment {
     EditText guestsCountEditText, nameEditText;
     Button confirmSearchButton, searchButton, retrieveButton, clearButton;
     DatePicker checkInDatePicker, checkOutDatePicker;
-    String checkInDate, checkOutDate, numberOfGuests, guestName;
+
+    ImageView barcodeImageView;
+    String  numberOfGuests, guestName;
+
+
+    private EditText checkInEditText;
+    private EditText checkOutEditText;
+
+    private Calendar checkInDate;
+    private Calendar checkOutDate;
+
+
 
 
     // Declaration of shared preferences keys
@@ -56,128 +86,107 @@ public class HotelSearchFragment extends Fragment {
         titleTextView = view.findViewById(R.id.title_text_view);
         searchTextConfirmationTextView = view.findViewById(R.id.search_confirm_text_view);
 
+
         guestsCountEditText = view.findViewById(R.id.guests_count_edit_text);
 
         //For Shared Pref Demo
-        nameEditText = view.findViewById(R.id.name_edit_text);
-        retrieveButton = view.findViewById(R.id.retrieve_button);
-        clearButton = view.findViewById(R.id.clear_button);
 
-        confirmSearchButton = view.findViewById(R.id.confirm_my_search_button);
         searchButton = view.findViewById(R.id.search_button);
 
-        checkInDatePicker = view.findViewById(R.id.checkin_date_picker_view);
-        checkOutDatePicker = view.findViewById(R.id.checkout_date_picker_view);
+
+        barcodeImageView = view.findViewById(R.id.barcodeImageView);
 
         //set Title Text
         titleTextView.setText(R.string.welcome_text);
 
+
+        checkInEditText = view.findViewById(R.id.checkin_edit_text);
+        checkOutEditText = view.findViewById(R.id.checkout_edit_text);
+
+        checkInEditText.setOnClickListener(v -> showDatePickerDialog(checkInEditText, true));
+        checkOutEditText.setOnClickListener(v -> showDatePickerDialog(checkOutEditText, false));
+
+
+
+
+
+
         //Set up the text of confirm text box
-        confirmSearchButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                checkInDate = getDateFromCalendar(checkInDatePicker);
-                checkOutDate = getDateFromCalendar(checkOutDatePicker);
-                //Get input of guests count
-                numberOfGuests = guestsCountEditText.getText().toString();
-                guestName = nameEditText.getText().toString();
-
-
-                // Saving into shared preferences
-                sharedPreferences = getActivity().getSharedPreferences(myPreference, Context.MODE_PRIVATE);
-                SharedPreferences.Editor editor = sharedPreferences.edit();
-                editor.putString(name, guestName);
-                editor.putString(guestsCount, numberOfGuests);
-                editor.commit();
-
-                Boolean isDateValid = isDateRangeValid(checkInDate, checkOutDate);
-                if(isDateValid) {
-                    searchTextConfirmationTextView.setText("Dear Customer, Your check in date is " + checkInDate + ", " +
-                            "your checkout date is " + checkOutDate + ".The number of guests are " + numberOfGuests + "is date valid: " + isDateValid);
-                } else if (!isDateValid) {
-                    searchTextConfirmationTextView.setText("Please input a valid date");
-                }
-                else {
-                    searchTextConfirmationTextView.setText("unknown date related error");
-                }
-            }
-        });
 
         //Search Button click Listener
         searchButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                checkInDate = getDateFromCalendar(checkInDatePicker);
-                checkOutDate = getDateFromCalendar(checkOutDatePicker);
-                //Get input of guests count
-                numberOfGuests = guestsCountEditText.getText().toString();
 
-                Bundle bundle = new Bundle();
-                bundle.putString("check in date", checkInDate);
-                bundle.putString("check out date", checkOutDate);
-                bundle.putString("number of guests", numberOfGuests);
+                Boolean isDateValid = isDateRangeValid(checkInDate, checkOutDate);
+                if(isNumeric(guestsCountEditText.getText().toString())) {
+                    numberOfGuests = guestsCountEditText.getText().toString();
+                    if (isDateValid && Integer.parseInt(numberOfGuests) < 10) {
 
+                        Bundle bundle = new Bundle();
+                        bundle.putString("check in date", getDateFromCalendar(checkInDate));
+                        bundle.putString("check out date", getDateFromCalendar(checkOutDate));
+                        bundle.putString("number of guests", numberOfGuests);
 
-                // set Fragment class Arguments
-                HotelsListFragment hotelsListFragment = new HotelsListFragment();
-                hotelsListFragment.setArguments(bundle);
+                        HotelsListFragment hotelsListFragment = new HotelsListFragment();
+                        hotelsListFragment.setArguments(bundle);
 
-                FragmentTransaction fragmentTransaction = getFragmentManager().beginTransaction();
-                fragmentTransaction.replace(R.id.main_layout, hotelsListFragment);
-                fragmentTransaction.remove(HotelSearchFragment.this);
-                fragmentTransaction.addToBackStack(null);
-                fragmentTransaction.commit();
+                        FragmentTransaction fragmentTransaction = getFragmentManager().beginTransaction();
+                        fragmentTransaction.replace(R.id.main_layout, hotelsListFragment);
+                        fragmentTransaction.remove(HotelSearchFragment.this);
+                        fragmentTransaction.addToBackStack(null);
+                        fragmentTransaction.commit();
+                    } else if (!isDateValid) {
+                        searchTextConfirmationTextView.setText("Please input a valid date");
+                    } else if (Integer.parseInt(numberOfGuests) > 10) {
+                        searchTextConfirmationTextView.setText("Cannot handle more than 10 person");
+                    } else {
+                        searchTextConfirmationTextView.setText("unknown date related error");
+                    }
+                } else{
+                    searchTextConfirmationTextView.setText("Please enter a valid number");
+                }
+
             }
         });
 
 
-        // Retrieve Button Click Listener
-
-        retrieveButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                sharedPreferences = getActivity().getSharedPreferences(myPreference, Context.MODE_PRIVATE);
-
-                if (sharedPreferences.contains(name)) {
-                    nameEditText.setText(sharedPreferences.getString(name, ""));
-                }
-                if (sharedPreferences.contains(guestsCount)) {
-                    guestsCountEditText.setText(sharedPreferences.getString(guestsCount, ""));
-
-                }
-            }
-        });
 
         //Clear Button Click Listener
-        clearButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                guestsCountEditText.setText("");
-                nameEditText.setText("");
-            }
-        });
+
     }
 
     // Function to get the date object
-    private String getDateFromCalendar(DatePicker datePicker) {
-        int day = datePicker.getDayOfMonth();
-        int month = datePicker.getMonth();
-        int year = datePicker.getYear();
 
-        Calendar calendar = Calendar.getInstance();
-        calendar.set(year, month, day);
 
-        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("dd-MM-yyyy");
-        String formattedDate = simpleDateFormat.format(calendar.getTime());
-
-        return formattedDate;
+    private String getDateFromCalendar(Calendar date) {
+        // Use the date here
+        // Example: Log the selected date or process it further
+        SimpleDateFormat logFormat = new SimpleDateFormat("dd-MM-yyyy", Locale.getDefault());
+        System.out.println("Selected date: " + logFormat.format(date.getTime()));
+        return logFormat.format(date.getTime());
     }
 
-    public static boolean isDateRangeValid(String startDateString, String endDateString) {
+    public static boolean isNumeric(String str) {
+        try {
+            Integer.parseInt(str);
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
+    public boolean isDateRangeValid(Calendar startDateString, Calendar endDateString) {
+        if(startDateString == null){
+            return false;
+        }
+        if(endDateString == null){
+            return false;
+        }
         try {
             // Parse start and end date strings to LocalDate objects
-            LocalDate startDate = LocalDate.parse(startDateString, DateTimeFormatter.ofPattern("dd-MM-yyyy"));
-            LocalDate endDate = LocalDate.parse(endDateString, DateTimeFormatter.ofPattern("dd-MM-yyyy"));
+            LocalDate startDate = LocalDate.parse(getDateFromCalendar(startDateString), DateTimeFormatter.ofPattern("dd-MM-yyyy"));
+            LocalDate endDate = LocalDate.parse(getDateFromCalendar(endDateString), DateTimeFormatter.ofPattern("dd-MM-yyyy"));
 
             // Check if start date is before or equal to end date
             return !endDate.isBefore(startDate);
@@ -192,20 +201,25 @@ public class HotelSearchFragment extends Fragment {
         }
     }
 
+    private void showDatePickerDialog(final EditText editText, boolean isCheckIn) {
+        final Calendar calendar = Calendar.getInstance();
+        DatePickerDialog datePickerDialog = new DatePickerDialog(getContext(), (view, year, month, dayOfMonth) -> {
+            calendar.set(Calendar.YEAR, year);
+            calendar.set(Calendar.MONTH, month);
+            calendar.set(Calendar.DAY_OF_MONTH, dayOfMonth);
+            SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
+            editText.setText(dateFormat.format(calendar.getTime()));
 
-    // Function to get the date object
-//    private String getDateFromCalendar(){
-//        int day = checkInDatePicker.getDayOfMonth();
-//        int month = checkInDatePicker.getMonth();
-//        int year = checkInDatePicker.getYear();
-//
-//        Calendar calendar = Calendar.getInstance();
-//        calendar.set(year,month,day);
-//
-//        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("dd-MM-yyyy");
-//        String formattedDate = simpleDateFormat.format(calendar.getTime());
-//
-//        return formattedDate;
-//    }
+            // Store the date in the appropriate variable
+            if (isCheckIn) {
+                checkInDate = (Calendar) calendar.clone();
+            } else {
+                checkOutDate = (Calendar) calendar.clone();
+            }
+
+        }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH));
+
+        datePickerDialog.show();
+    }
 
 }
