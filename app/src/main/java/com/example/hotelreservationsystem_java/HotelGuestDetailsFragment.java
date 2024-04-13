@@ -68,7 +68,7 @@ public class HotelGuestDetailsFragment extends Fragment {
         String checkOutDate = getArguments().getString("check out date");
 
         hotelRecapTextView.setText("Selected Hotel: " + hotelName + "\nCost: $" + hotelPrice +
-                 "\n Number of Guest: " + numberOfGuests +
+                 "\nNumber of Guest: " + numberOfGuests +
                 "\nCheck in Date: " + checkInDate + "\nCheck out date: " + checkOutDate);
     }
 
